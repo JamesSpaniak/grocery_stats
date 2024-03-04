@@ -1,5 +1,9 @@
-import time
+import dask
+dask.config.set({'dataframe.query-planning': True})
 
+import time
+import pandas as pd
+import dask.dataframe as dd
 from functools import wraps
 
 def timer(f):
@@ -13,3 +17,12 @@ def timer(f):
         return result
 
     return timed
+
+@timer
+def read_file(file_name, use_dask=True, print_cols=False):
+    df = pd.read_csv(file_name)
+    if print_cols:
+        print(f'Cols={df.columns}')
+    if use_dask:
+        return dd.from_pandas(df, npartitions=8)
+    return df

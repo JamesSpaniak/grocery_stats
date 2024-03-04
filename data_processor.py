@@ -1,19 +1,21 @@
-import csv, copy
+import dask
+dask.config.set({'dataframe.query-planning': True})
+
+import csv
+
 import pandas as pd
 import dask.dataframe as dd
 
-from util import timer
+from util import timer, read_file
 
 FILE_NAME = "data/train_combined_14_n_16.csv"
-    
+
 @timer
 def process_data(file_name):
-    df = pd.read_csv(file_name)
+    ddf = read_file(file_name, use_dask=True, print_cols=True)
     df_cols = ['Transactions', 'Unit Sales']
     agg_fns = ['mean', 'std', 'min', 'max', 'count']
-    #print(df_cols)
     
-    ddf = dd.from_pandas(df, npartitions=8)
     ddf_gb = ddf.groupby(["State", "Item Nbr"]) # Lazy compute
     #ddf_gb.persist() # cache
 
@@ -31,14 +33,21 @@ def process_data(file_name):
     #main_gb.to_csv(f'out/combined.csv', index=False, single_file=True) # write out file
 
     #ddf_us_std.to_csv('out.csv', index=False)
-    #LR -> https://stackoverflow.com/questions/29934083/linear-regression-on-pandas-dataframe-using-sklearn-indexerror-tuple-index-ou
 
     # ddf .filter(perishable,promotion)
     # LR based on 1,0 on oil vs unit sales per date
     # LR based on promotion vs no promotion vs unit sates/transactions
     
     # Pick n item and analyis pre,during,post promotion
+@timer
+def compute_linear_regression(file_name):
+    ddf = read_file(file_name, use_dask=True, print_cols=True)
+    df_pro1 = ddf.loc[ddf['Perishable']==1]
+    df_pro0 = ddf.loc[ddf['Perishable']==0]
+    #LR -> https://stackoverflow.com/questions/29934083/linear-regression-on-pandas-dataframe-using-sklearn-indexerror-tuple-index-ou
 
+    df_pro1.to_csv('out/perishable.csv', index=False, single_file=True)
 
 if __name__ == '__main__':
-    process_data(FILE_NAME)
+    #process_data(FILE_NAME)
+    compute_linear_regression(FILE_NAME)

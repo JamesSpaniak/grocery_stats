@@ -2,6 +2,7 @@
 
 ## Local Setup
 Untested on windows
+
 ### MAC OS (Intel)
 Install python3 (3.9.6)
 pip3 install -r requirements.txt
