@@ -35,10 +35,12 @@ def process_data(file_name):
 
     # ddf .filter(perishable,promotion)
     # LR based on 1,0 on oil vs unit sales per date
+    # 2 sample/pop comparison
     # LR based on promotion vs no promotion vs unit sates/transactions
     
     # Pick n item and analyis pre,during,post promotion
 
+@timer
 def run_linear_regression(file_name):
     ddf = read_file(file_name, use_dask=True, print_cols=True)
     df_pro1 = ddf.loc[ddf['Perishable']==1]
@@ -46,7 +48,7 @@ def run_linear_regression(file_name):
     # df_pro0 = ddf.loc[ddf['Perishable']==0]
     # individual transactions probs not valuable - group by item and get mean?
     # exclude outliers for LR
-    compute_linear_regression(df_pro1, 'Transactions', 'Unit Sales',plot_graph=True)
+    compute_linear_regression(df_pro1, 'Transactions', 'Unit Sales', plot_graph=True)
 
 if __name__ == '__main__':
     run_linear_regression(FILE_NAME)
