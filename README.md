@@ -10,4 +10,4 @@ Download data file + convert to csv in data/
 python3 data_processor.py
 
 ## Process
-Make runner script and move pernament functions in util.py or other helper .py files for reusage
+Make runner script and move permanent functions in util.py or other helper .py files for reusage
