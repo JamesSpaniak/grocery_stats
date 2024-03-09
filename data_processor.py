@@ -2,11 +2,10 @@ import dask
 dask.config.set({'dataframe.query-planning': True})
 
 import csv
-
 import pandas as pd
 import dask.dataframe as dd
 
-from util import timer, read_file
+from util import timer, read_file, compute_linear_regression
 
 FILE_NAME = "data/train_combined_14_n_16.csv"
 
@@ -39,15 +38,15 @@ def process_data(file_name):
     # LR based on promotion vs no promotion vs unit sates/transactions
     
     # Pick n item and analyis pre,during,post promotion
-@timer
-def compute_linear_regression(file_name):
+
+def run_linear_regression(file_name):
     ddf = read_file(file_name, use_dask=True, print_cols=True)
     df_pro1 = ddf.loc[ddf['Perishable']==1]
-    df_pro0 = ddf.loc[ddf['Perishable']==0]
-    #LR -> https://stackoverflow.com/questions/29934083/linear-regression-on-pandas-dataframe-using-sklearn-indexerror-tuple-index-ou
-
-    df_pro1.to_csv('out/perishable.csv', index=False, single_file=True)
+    
+    # df_pro0 = ddf.loc[ddf['Perishable']==0]
+    # individual transactions probs not valuable - group by item and get mean?
+    # exclude outliers for LR
+    compute_linear_regression(df_pro1, 'Transactions', 'Unit Sales',plot_graph=True)
 
 if __name__ == '__main__':
-    #process_data(FILE_NAME)
-    compute_linear_regression(FILE_NAME)
+    run_linear_regression(FILE_NAME)
