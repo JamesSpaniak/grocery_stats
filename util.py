@@ -23,6 +23,8 @@ def timer(f):
 
 @timer
 def read_file(file_name, use_dask=True, print_cols=False, nrows=-1):
+    # we may need to move to parquet if we store many calculated columns based on original col
+    # ie pct change, moving avg, etc...
     df = None
     if nrows<0:
         df = pd.read_csv(file_name)
