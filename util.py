@@ -37,7 +37,7 @@ def read_file(file_name, use_dask=True, print_cols=False, nrows=-1):
     return df
 
 @timer
-def compute_linear_regression(df, xcol, ycol, plot_graph=False): # [(col_name, value)]
+def compute_linear_regression(df, xcol, ycol, plot_graph=False): # dask->sklearn :(
     x_data = df[xcol].values
     y_data = df[ycol].values
 
@@ -57,3 +57,22 @@ def compute_linear_regression(df, xcol, ycol, plot_graph=False): # [(col_name, v
         plt.xticks(())
         plt.yticks(())
         plt.show()
+
+@timer
+def load_csv_into_db(file_name, pg_uri, client):
+    df = read_file(file_name, use_dask=False, print_cols=True)
+    # rename columns, psql was made at some names....
+    new_col_names = ['city', 'date', 'date_holidays', 'date_oil',
+       'date_transactions', 'description', 'family', 'id', 'item_id',
+       'item_id_items', 'locale', 'locale_name', 'onpromotion', 'state',
+       'store_id', 'store_id_stores', 'store_id_transactions',
+       'transferred', 'type', 'type_holidays', 'class', 'cluster',
+       'oil_price', 'perishable', 'transactions', 'unit_sales']
+    df.columns = new_col_names
+    print(df.head())
+    #client.persist(df)
+    # check if exists first?
+    try: # Fails by default if table is already present
+        df.to_sql('original_data', pg_uri, chunksize=500000)
+    except ValueError as ex:
+        print(ex)
