@@ -41,8 +41,8 @@ def compute_linear_regression(df, xcol, ycol, plot_graph=False): # dask->sklearn
     x_data = df[xcol].values
     y_data = df[ycol].values
 
-    x_data.compute_chunk_sizes()
-    y_data.compute_chunk_sizes()
+    #x_data.compute_chunk_sizes()
+    #y_data.compute_chunk_sizes()
 
     length = len(x_data)
     x_data = x_data.reshape(length, 1)
