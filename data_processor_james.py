@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 import dask.dataframe as dd
 from dask.distributed import Client
 
-from util import timer, read_file, compute_linear_regression, load_csv_into_db
+from util import timer, read_file, compute_linear_regression, load_csv_into_db, plot_time_series
 
 FILE_NAME = "data/train_combined_14_n_16.csv"
 PG_URI = 'postgresql://postgres:postgres@localhost:5432/postgres'
@@ -73,48 +73,15 @@ def explore_row_lags(file_name, client):
 
 @timer
 def explore_psql(file_name, pg_uri, client):
-    #load_csv_into_db(file_name, pg_uri, client)
-    # Note below query does not properly order date due to format MM/dd/yyyy, need yyyy/MM/dd
     data_query = """
-        WITH oil_price_as_date(price, f_date, transactions_count, at_size) AS (
-            SELECT 
-                MIN(oil_price) AS price,
-                TO_DATE(date_oil, 'MM/DD/YYYY') AS f_date,
-                SUM(transactions) AS transactions_count,
-                SUM(unit_sales) AS at_size
-            FROM public.original_data d
-            GROUP BY f_date
-        ),
-        oil_price_prev(price, f_date, prev_price, transactions_count, tc_prev, size_per_t) AS (
-            SELECT
-                price,
-                f_date,
-                LAG(price, 1) OVER (ORDER BY f_date) prev_price,
-                transactions_count,
-                LAG(transactions_count, 1) OVER (ORDER BY f_date) tc_prev,
-                transactions_count/at_size AS size_per_t
-            FROM oil_price_as_date
-            WHERE price IS NOT NULL
-        )
-        SELECT
-            price,
-            (transactions_count/1000) as tc_k,
-            f_date,
-            size_per_t,
-            (o.price-o.prev_price) as diff,
-            ((o.price-o.prev_price)/o.prev_price) as pct_change,
-            (ln(o.price) - ln(o.prev_price)) as log_return,
-            ((o.transactions_count-o.tc_prev)/o.tc_prev) as tc_pct_change
-        FROM oil_price_prev o
-        ORDER BY f_date
+       SELECT * FROM oil_price_util;
     """
     engine = create_engine(pg_uri)
     conn = engine.connect()
-    #res = conn.execute(data_query)
     df = pd.read_sql(data_query, conn)
-    #df.columns = res.keys()
+    # CUT in half at 2015, two time regions
     print(df.head())
-    compute_linear_regression(df, "price", "size_per_t", True)
+    plot_time_series(df, "f_date", "pct_change")
 
 if __name__ == '__main__':
     client = Client() # highly recommend passing client around, just init under main or you will see errors

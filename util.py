@@ -59,6 +59,14 @@ def compute_linear_regression(df, xcol, ycol, plot_graph=False): # dask->sklearn
         plt.show()
 
 @timer
+def plot_time_series(df, date_col, val_col):
+    x_data = df[date_col].values
+    y_data = df[val_col].values
+
+    plt.plot(x_data, y_data)
+    plt.show()
+
+@timer
 def load_csv_into_db(file_name, pg_uri, client):
     df = read_file(file_name, use_dask=False, print_cols=True)
     # rename columns, psql was made at some names....
