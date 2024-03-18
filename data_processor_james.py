@@ -111,10 +111,11 @@ def explore_psql(file_name, pg_uri, client):
     ## Compare histograms of tc_m_s vs tc_m_r
 
     ## Construct CI for data
-    ci = construct_sample_ci(tc_m_r, 50, 0.95)
+    ci = construct_sample_ci(tc_m_s, 50, 0.95) ## NOTE: seq is giving larger CI vs random CI
     print(ci)
 
     ## Hypothesis testing
+    
 
 
 
