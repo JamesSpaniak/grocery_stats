@@ -2,8 +2,9 @@
 import dask
 dask.config.set({'dataframe.query-planning': True})
 
-import time
+import time, random, scipy
 import pandas as pd
+import numpy as np
 import dask.dataframe as dd
 import matplotlib.pyplot as plt
 from functools import wraps
@@ -84,3 +85,44 @@ def load_csv_into_db(file_name, pg_uri, client):
         df.to_sql('original_data', pg_uri, chunksize=500000)
     except ValueError as ex:
         print(ex)
+
+@timer
+def construct_samples_random(df, val_col, sample_size, fn=None):
+    values = df[val_col].values.tolist()
+    total_values=len(values)
+    num_samples = int(total_values/sample_size)
+    samples=[]
+    for i in range(num_samples):
+        curr = random.sample(values, sample_size)
+        if not fn:
+            samples.append(curr)
+        else:
+            samples.append(fn(curr))
+    return samples
+
+@timer
+def construct_samples_seq(df, val_col, num_samples, fn=None):
+    values = df[val_col].values.tolist()
+    total_values=len(values)
+    samples = []
+    curr_start = 0
+    sample_size = int(total_values/num_samples)
+    for i in range(num_samples):
+        curr_end = curr_start+sample_size
+        if curr_end>total_values:
+            return samples
+        curr = values[curr_start:curr_end]
+        if not fn:
+            samples.append(curr)
+        else:
+            samples.append(fn(curr))
+        curr_start = curr_end
+    return samples
+
+@timer
+def construct_sample_ci(sample_data, sample_size, conf_levl):
+    mu = np.mean(sample_data)
+    s = np.std(sample_data)
+    sigma = s / (sample_size**(0.5))
+    ci = scipy.stats.norm.interval(confidence=conf_levl, loc=mu, scale=sigma)
+    return ci

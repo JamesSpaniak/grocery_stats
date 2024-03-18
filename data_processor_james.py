@@ -3,12 +3,14 @@ dask.config.set({'dataframe.query-planning': True})
 
 import csv, random, sys, time
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
 
 import dask.dataframe as dd
 from dask.distributed import Client
 
-from util import timer, read_file, compute_linear_regression, load_csv_into_db, plot_time_series
+from util import (timer, read_file, compute_linear_regression, load_csv_into_db, \
+        plot_time_series, construct_samples_random, construct_samples_seq, construct_sample_ci)
 
 FILE_NAME = "data/train_combined_14_n_16.csv"
 PG_URI = 'postgresql://postgres:postgres@localhost:5432/postgres'
@@ -74,14 +76,49 @@ def explore_row_lags(file_name, client):
 @timer
 def explore_psql(file_name, pg_uri, client):
     data_query = """
-       SELECT * FROM oil_price_util;
+       WITH transactions_by_date(f_date, store_id, transactions_count, at_size) AS (
+            SELECT 
+                TO_DATE(date_oil, 'MM/DD/YYYY') AS f_date,
+                store_id,
+                SUM(transactions) AS transactions_count,
+                SUM(unit_sales) AS at_size
+            FROM public.original_data d
+            GROUP BY f_date, store_id
+        )
+        SELECT
+            f_date,
+            transactions_count,
+            at_size,
+            avg(transactions_count) over(
+                partition by f_date, store_id ORDER BY f_date 
+                RANGE BETWEEN INTERVAL '5 days' PRECEDING 
+                    AND INTERVAL '5 days' FOLLOWING) As "10_day_avg"
+        FROM transactions_by_date
     """
+
+    data_query = "SELECT * FROM public.original_data LIMIT 100000"
     engine = create_engine(pg_uri)
     conn = engine.connect()
     df = pd.read_sql(data_query, conn)
-    # CUT in half at 2015, two time regions
+    df = df.iloc[1:] # drop first row
+    df = df.iloc[:100000] # LIMIT
     print(df.head())
-    plot_time_series(df, "f_date", "pct_change")
+    #plot_time_series(df, "f_date", "10_day_avg")
+
+    # Population mean/std deviation using basic functions
+    tc_m_s = construct_samples_seq(df, "transactions", 50, fn=np.mean) # num samples
+    tc_m_r = construct_samples_random(df, "transactions", 50, fn=np.mean) # sample size
+    ## Compare histograms of tc_m_s vs tc_m_r
+
+    ## Construct CI for data
+    ci = construct_sample_ci(tc_m_r, 50, 0.95)
+    print(ci)
+
+    ## Hypothesis testing
+
+
+
+
 
 if __name__ == '__main__':
     client = Client() # highly recommend passing client around, just init under main or you will see errors
